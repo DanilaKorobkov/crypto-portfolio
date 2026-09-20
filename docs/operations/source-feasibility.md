@@ -101,3 +101,10 @@ address. It validates only the positions envelope and pagination termination,
 logs counts rather than identifiers or quantities, and still cannot accept a
 user wallet. A zero-candidate result is valid contract evidence but proves no
 real portfolio coverage.
+
+The first combined run, `35520937842`, reconfirmed the complete 64-chain catalog
+but the immediately following positions request returned `rate_limited`: two
+requests were attempted, no positions page was accepted, and the job failed
+closed. This is provider-origin evidence, not a transport failure or an empty
+portfolio. The probe interval is increased from 400 milliseconds to two seconds
+before one controlled retry; no general retry loop is added.

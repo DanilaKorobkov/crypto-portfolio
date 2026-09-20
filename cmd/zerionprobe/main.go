@@ -61,6 +61,9 @@ func probe(ctx context.Context, key string, discoverer catalogDiscoverer) (probe
 func run() error {
 	key := os.Getenv("ZERION_API_KEY")
 	discoverer := zerion.New(transport.New(), key)
+	// Feasibility probes favor quota safety over throughput. The production
+	// discoverer remains independently bounded and configurable.
+	discoverer.Interval = 2 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
 	result, err := probe(ctx, key, discoverer)
