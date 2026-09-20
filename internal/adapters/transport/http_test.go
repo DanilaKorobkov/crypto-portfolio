@@ -57,4 +57,9 @@ func TestPaymentAndRateLimits(t *testing.T) {
 	if Classify(402) != domain.PaymentRequired || !Classify(429).StopsProvider() {
 		t.Fatal("no paid fallback")
 	}
+	for _, code := range []int{400, 404, 422} {
+		if Classify(code) != domain.APIError {
+			t.Fatalf("HTTP %d was not classified as provider API error", code)
+		}
+	}
 }
