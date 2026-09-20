@@ -1,0 +1,55 @@
+name: Encrypted portfolio collection
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: encrypted-portfolio-collection
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment: live-collection
+    env:
+      WALLETS_JSON: ${{ secrets.WALLETS_JSON }}
+      RPC_CONFIG_JSON: ${{ secrets.RPC_CONFIG_JSON }}
+      ZERION_API_KEY: ${{ secrets.ZERION_API_KEY }}
+      REPORT_RECIPIENT: ${{ vars.REPORT_RECIPIENT }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Validate private configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$WALLETS_JSON"
+          test -n "$RPC_CONFIG_JSON" || test -n "$ZERION_API_KEY"
+          test -n "$REPORT_RECIPIENT"
+      - name: Collect encrypted diagnostics
+        run: go run ./cmd/portfolio
+      - name: Verify ciphertext-only output
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s output/diagnostics.json.age
+          test ! -e output/diagnostics.json
+          test "$(find output -maxdepth 1 -type f | wc -l)" -eq 1
+      - name: Upload encrypted diagnostics
+        uses: actions/upload-artifact@v6
+        with:
+          name: portfolio-diagnostics-${{ github.run_id }}
+          path: output/diagnostics.json.age
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+

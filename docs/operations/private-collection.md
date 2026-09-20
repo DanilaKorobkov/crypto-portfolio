@@ -21,7 +21,7 @@ Generate an identity using the official `age-keygen` tool in the private consumi
 ## Open integration gates
 
 1. **Supported execution API:** the current GitHub connector can write code and read run logs/artifacts, but does not expose secret administration or initial workflow dispatch. The current runtime has no separately authenticated GitHub CLI. GitHub itself supports both APIs; this is a limitation of the connected surface. Recurring reports should use proper workflow dispatch or another authenticated job API, not trigger commits.
-2. **Authorized sources:** no RPC/provider credentials are configured. A no-wallet probe of Robinhood's documented public RPC timed out after 15 seconds in this runtime. No wallet or protocol coverage can be inferred from it.
+2. **Authorized sources:** no RPC/provider credentials are configured. The historical probe of Robinhood's documented public RPC timed out; the current runtime rejects no-wallet JSON-RPC probes at its CONNECT tunnel with HTTP 403. No wallet or protocol coverage can be inferred from either result.
 3. **Private delivery:** define a verified result channel and consumer key custody. Downloaded ciphertext must be tied to an expected run and commit. Remote collection is not enabled merely because local encryption tests passed.
 4. **Zero budget:** standard public Ubuntu runners are free, but artifact storage shares a metered allowance with GitHub Packages. Verify account limits and spending controls before publishing artifacts; short retention alone does not prove zero spend. No artifact upload is enabled by the current smoke workflow.
 5. **History:** encrypted run artifacts are a transport candidate, not a durable database. Choose and test persistent private storage independently.
@@ -52,3 +52,9 @@ The current runtime has GitHub CLI 2.96.0, but `gh auth status` reports no authe
 The existing GitHub connector still supports its advertised repository operations. It does not supply the missing secret administration or initial workflow dispatch operations. Do not substitute alternate network routes or artificial trigger commits for these missing capabilities.
 
 The remaining external prerequisites are authenticated, least-privilege access to the execution API; private provider/wallet configuration; verified consumer-key custody and ciphertext delivery; and confirmation of zero-cost account controls. Public GitHub API access alone satisfies none of these gates. The Robinhood public RPC still cannot be used from this runtime: no-wallet JSON-RPC probes are rejected by the environment's CONNECT tunnel with HTTP 403. Do not retry it through alternate routes or use public logs as a substitute for private result transport.
+
+## Manual encrypted collection workflow
+
+`.github/workflows/collect.yml` is manual-only and targets the `live-collection` GitHub environment. It has read-only repository permissions, an eight-minute job timeout and concurrency protection. The job refuses to collect unless wallets, at least one source configuration and the public age recipient are present. It then verifies that the output directory contains only `diagnostics.json.age` before uploading a one-day artifact.
+
+The workflow's presence does not authorize a live run. Before the first dispatch, configure environment protection, verify zero-cost Actions and artifact controls, provision secrets without exposing their values, and retain the consumer identity outside GitHub. An artifact is transport, not durable history. Bind every downloaded ciphertext to the expected repository, workflow run and commit before decrypting it.
