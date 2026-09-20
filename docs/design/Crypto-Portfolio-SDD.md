@@ -1,8 +1,8 @@
 # Crypto Portfolio — Software Design Document
 
-Версия 3.4 · 20 сентября 2026 · Go, DDD/Clean Architecture и журнал проверки осуществимости.
+Версия 3.5 · 20 сентября 2026 · Go, DDD/Clean Architecture и журнал проверки осуществимости.
 
-**Статус:** вычислительное ядро синтетически проверено, но главный риск продукта — доступность, полнота и проверяемость реальных данных — не снят. Разработка новых provider-neutral метрик приостановлена до проверки data plane. Public Actions остаются только синтетическими; live-сбор не выполнялся, реальных данных кошельков нет. Актуальная стратегия — §12; первый D0 результат — §14.27, безопасная граница authenticated D1 — §14.28, локальный authenticated результат — §14.29, фактические ограничения GitHub execution access — §14.30. Это не готовый отчёт о портфеле.
+**Статус:** вычислительное ядро синтетически проверено, но главный риск продукта — полнота и проверяемость реальных данных — ещё не снят. Authenticated Zerion catalog доступен с GitHub-hosted runner; positions contract и реальное покрытие пока не доказаны. Public Actions остаются только синтетическими; live-сбор не выполнялся, реальных данных кошельков нет. Актуальная стратегия — §12, результаты — §14.27–§14.31. Это не готовый отчёт о портфеле.
 
 ## 1. Задача
 
@@ -727,3 +727,13 @@ Coverage публикует counts экономических, оценённы�
 Следовательно, эта авторизация пригодна только для чтения и не позволяет агенту опубликовать ещё отсутствующий на default branch `zerion-contract-probe.yml` или запустить workflow. Secret, добавленный пользователем через UI, не проверялся и его значение не читалось. Ни один Zerion request на GitHub-hosted runner не состоялся.
 
 Локальная ветка объединена с текущим `origin/develop`; при разрешении конфликтов сохранено позднейшее решение §14.19 об удалении artifact-based live workflow, поэтому исторический `.github/workflows/collect.yml` не восстановлен. Следующий внешний gate — предоставить этой среде repository contents write и Actions workflow write/dispatch либо опубликовать подготовленный PR штатным интерфейсом. До этого повторная device authorization тем же приложением не добавит capability и не должна запрашиваться.
+
+### 14.31 Постоянная GitHub CLI авторизация и успешный Zerion catalog D1 — v3.5, 20.09.2026
+
+Причиной HTTP 403 в §14.30 оказался неверно выбранный client ID при ручном device flow, а не ограничение аккаунта. После одного подтверждения через официальный OAuth-клиент GitHub CLI получены scopes `repo`, `workflow`, `read:org`, `gist`; авторизация сохранена в стандартном `~/.config/gh/hosts.yml` с правами `0600`. Успешно проверены push, Actions Secrets metadata и workflow dispatch. Повторные device-коды в этой сохраняемой среде не требуются.
+
+Подготовленная ветка опубликована, PR #3 прошёл `Portfolio offline smoke test` run `35520684072` и объединён в `develop` squash-коммитом `f953ff3e9c9884893872b09e284c6f998cf2caaf`. Исторический artifact-based `collect.yml` не восстановлен.
+
+Ручной synthetic-only run `35520749102` выполнил authenticated Zerion catalog probe на GitHub-hosted runner за 26 секунд. Без адресов кошельков и artifacts получены `catalog_status=ok`, `complete=true`, 64 chain records и один request. Это закрывает transport/auth/envelope гипотезу каталога, но не доказывает positions schema, pagination или portfolio coverage.
+
+Следующий data-first шаг реализует D1 positions-envelope проверку на единственном встроенном публичном zero address. Команда не принимает пользовательский address и выводит только статусы и counts, не identifiers/quantities/body. После синтетической проверки изменения будут опубликованы и запущены один раз; только затем принимается решение о переходе к приватному D2.

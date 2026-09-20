@@ -19,7 +19,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
-      - name: Validate authenticated catalog without wallet data
+      - name: Validate catalog and public test-address contracts
         env:
           ZERION_API_KEY: ${{ secrets.ZERION_API_KEY }}
         run: go run ./cmd/zerionprobe

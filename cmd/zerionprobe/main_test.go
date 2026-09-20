@@ -21,20 +21,21 @@ func (f *fakeDiscoverer) Discover(_ context.Context, wallets []domain.Address, _
 
 func TestProbeRequiresKeyWithoutCallingProvider(t *testing.T) {
 	fake := &fakeDiscoverer{}
-	status, chains, requests, err := probe(context.Background(), "", fake)
-	if err == nil || status != domain.MissingAPIKey || chains != 0 || requests != 0 || fake.wallets != nil {
-		t.Fatalf("unexpected result: %s %d %d %v", status, chains, requests, err)
+	result, err := probe(context.Background(), "", fake)
+	if err == nil || result.CatalogStatus != domain.MissingAPIKey || result.Requests != 0 || fake.wallets != nil {
+		t.Fatalf("unexpected result: %+v %v", result, err)
 	}
 }
 
-func TestProbeUsesCatalogOnly(t *testing.T) {
+func TestProbeUsesPublicTestAddress(t *testing.T) {
 	fake := &fakeDiscoverer{result: domain.Discovery{
 		CatalogStatus: domain.OK, CatalogComplete: true, Requests: 1,
-		Chains: []domain.ChainSupport{{ID: "fixture"}},
+		Chains:  []domain.ChainSupport{{ID: "fixture"}},
+		Wallets: []domain.WalletDiscovery{{Wallet: publicTestAddress, Status: domain.OK, ResponseComplete: true, Pages: 1}},
 	}}
-	status, chains, requests, err := probe(context.Background(), "secret", fake)
-	if err != nil || status != domain.OK || chains != 1 || requests != 1 || len(fake.wallets) != 0 {
-		t.Fatalf("unexpected result: %s %d %d %v", status, chains, requests, err)
+	result, err := probe(context.Background(), "secret", fake)
+	if err != nil || result.CatalogStatus != domain.OK || result.Chains != 1 || result.Requests != 1 || len(fake.wallets) != 1 || fake.wallets[0] != publicTestAddress {
+		t.Fatalf("unexpected result: %+v %v", result, err)
 	}
 }
 
@@ -43,9 +44,10 @@ func TestProbeRejectsIncompleteEmptyAndAdapterErrors(t *testing.T) {
 		{result: domain.Discovery{CatalogStatus: domain.OK, CatalogComplete: false}},
 		{result: domain.Discovery{CatalogStatus: domain.OK, CatalogComplete: true}},
 		{result: domain.Discovery{CatalogStatus: domain.TransportError}, err: errors.New("network")},
+		{result: domain.Discovery{CatalogStatus: domain.OK, CatalogComplete: true, Chains: []domain.ChainSupport{{ID: "fixture"}}, Wallets: []domain.WalletDiscovery{{Wallet: publicTestAddress, Status: domain.InvalidResponse}}}},
 	}
 	for i := range tests {
-		if _, _, _, err := probe(context.Background(), "secret", &tests[i]); err == nil {
+		if _, err := probe(context.Background(), "secret", &tests[i]); err == nil {
 			t.Fatalf("case %d unexpectedly passed", i)
 		}
 	}
