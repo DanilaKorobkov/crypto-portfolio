@@ -589,3 +589,12 @@ Device OAuth завершён через стандартный client ID из �
 Добавлен `.github/workflows/collect.yml` для будущего первого зашифрованного сбора. Workflow запускается только вручную, использует environment `live-collection`, read-only `contents`, timeout 8 минут и отдельную concurrency group. Он требует `WALLETS_JSON`, хотя бы один из `RPC_CONFIG_JSON`/`ZERION_API_KEY` и публичный `REPORT_RECIPIENT`; после CLI проверяет наличие единственного файла `output/diagnostics.json.age` и отсутствие plaintext. Artifact имеет retention один день и не является долговечной историей.
 
 Workflow намеренно не запущен. До dispatch остаются gates: consumer identity должна быть создана и сохранена вне GitHub; environment secrets/variable должны быть настроены без публикации значений; нулевая стоимость Actions/artifact storage и protection rules должны быть проверены. После этого первый run даст ciphertext, который необходимо связать с ожидаемыми repo/run/commit до расшифровки. Только фактический расшифрованный discovery определит следующие protocol adapters; отсутствие позиции или метрики не будет заменяться нулём.
+
+
+### 14.18 Публикация защищённого workflow — v2.2, 20.09.2026
+
+Изменение v2.1 опубликовано через PR #1 и объединено squash-коммитом `798f7aa1f3ec7a6279600167c88239979ca4ed44` в `develop`. Серверный список файлов перед merge содержал только `.github/workflows/collect.yml`, SDD и runbook. Live workflow не запускался.
+
+Через авторизованный GitHub API создан environment `live-collection`. Deployment branch policy допускает только ветку `develop`; secrets и variable ещё не настроены. Это уменьшает риск запуска изменённого collector из произвольной ветки, но не заменяет проверку конфигурации, consumer identity и нулевого бюджета.
+
+Следующий внешний шаг — создать age identity в долговечном приватном хранилище consumer. В GitHub передаётся только публичный recipient. После этого владелец через UI environment `live-collection` вводит `WALLETS_JSON`, один или оба источника `RPC_CONFIG_JSON`/`ZERION_API_KEY` и variable `REPORT_RECIPIENT`; значения не передаются в чат. До первого dispatch отдельно подтверждаются Actions budget/overage controls. Агент затем проверяет только наличие имён конфигурации, запускает workflow, связывает artifact с ожидаемыми run/commit и не выводит содержимое отчёта публично.
