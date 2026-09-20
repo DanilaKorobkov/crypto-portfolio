@@ -41,3 +41,10 @@ Generate an identity using the official `age-keygen` tool in the private consumi
 - [GitHub Actions secrets API](https://docs.github.com/en/rest/actions/secrets)
 - [GitHub Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
 - [Robinhood network endpoints](https://docs.robinhood.com/chain/connecting/)
+
+
+## Current verification and access setup
+
+[CI run 35509859451](https://github.com/DanilaKorobkov/crypto-portfolio/actions/runs/35509859451) passed all 31 named tests with the race detector on Go 1.27.1. Encryption remains verified with artificial fixtures only.
+
+Official GitHub CLI 2.101.0 is installed in the current development runtime from a checksum-verified official release. Its device authorization flow is waiting for the account owner's approval. This is separate from connector authorization. Once authorized, verify repository access and use native `gh workflow run` and `gh secret set`; their availability is not assumed before the authorization check. CLI credentials remain outside the repository, and a transient runtime may require reauthorization after cleanup.
