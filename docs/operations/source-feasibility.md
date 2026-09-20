@@ -44,8 +44,25 @@ printed or uploaded.
 
 The manual `zerion-contract-probe.yml` workflow is synthetic: it has read-only
 repository permission, no wallet input, no artifact, no schedule, and no commit
-trigger. Its secret must be a fresh free-plan credential configured in GitHub;
-a credential pasted into chat is considered disclosed and must not be installed
-or tested. Passing this gate proves only authenticated catalog reachability and
-the envelope contract. It does not prove wallet-position coverage, quota safety,
+trigger. A credential disclosed in chat may be used only for an explicitly
+authorized, transient local feasibility check that neither persists nor prints
+it. It must not be committed, logged, uploaded as an artifact, or installed as a
+long-lived CI/production secret, and it must be rotated before production use.
+Passing this gate proves only authenticated catalog reachability and the
+envelope contract. It does not prove wallet-position coverage, quota safety,
 pagination correctness, or portfolio completeness.
+
+## Authenticated local result — 20 September 2026
+
+At the user's explicit direction, the disclosed test credential was supplied to
+`cmd/zerionprobe` through one process environment and immediately unset. The
+probe made one catalog request and returned `transport_error`, with an incomplete
+catalog, zero parsed chains, and a non-zero process exit. The credential was not
+printed, written to a file, committed, or installed in GitHub.
+
+This result is consistent with the earlier CONNECT restriction and does not
+establish whether Zerion accepted the credential. Repeating authenticated calls
+from this shell cannot distinguish provider behavior and is therefore stopped.
+The next useful test remains a single manual run on a permitted executor; the
+credential must be rotated no later than the end of the feasibility phase and
+before any production or wallet-data use.
