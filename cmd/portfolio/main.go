@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/DanilaKorobkov/crypto-portfolio/internal/adapters/rpc"
@@ -20,6 +21,7 @@ import (
 )
 
 type rpcConfig struct {
+	Chain   string `json:"chain"`
 	ChainID uint64 `json:"chain_id"`
 	URL     string `json:"url"`
 }
@@ -66,10 +68,11 @@ func run() error {
 	collector := application.Collector{Reports: reports}
 	for _, endpoint := range endpoints {
 		parsed, err := url.Parse(endpoint.URL)
-		if err != nil || endpoint.ChainID == 0 || parsed.Scheme != "https" || parsed.Hostname() == "" || parsed.User != nil || parsed.Fragment != "" {
+		endpoint.Chain = strings.ToLower(strings.TrimSpace(endpoint.Chain))
+		if err != nil || endpoint.Chain == "" || endpoint.ChainID == 0 || parsed.Scheme != "https" || parsed.Hostname() == "" || parsed.User != nil || parsed.Fragment != "" {
 			return errors.New("invalid RPC_CONFIG_JSON endpoint")
 		}
-		collector.Readers = append(collector.Readers, rpc.Reader{Endpoint: endpoint.URL, ChainID: endpoint.ChainID, HTTP: httpClient})
+		collector.Readers = append(collector.Readers, rpc.Reader{Endpoint: endpoint.URL, Chain: endpoint.Chain, ChainID: endpoint.ChainID, HTTP: httpClient})
 	}
 	if key := os.Getenv("ZERION_API_KEY"); key != "" {
 		collector.Discoverer = zerion.New(httpClient, key)

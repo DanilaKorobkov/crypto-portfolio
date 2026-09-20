@@ -6,23 +6,28 @@ The CLI can write standard age-encrypted JSON checkpoints with `REPORT_RECIPIENT
 
 Encryption is tested with ephemeral, artificial fixtures. No persistent user encryption identity has been created, no live secrets have been provisioned, and no encrypted artifact delivery has been verified.
 
-## Configuration required for the first live run
+## Optional encrypted-output configuration
 
 | Setting | Purpose | Handling |
 | --- | --- | --- |
-| `WALLETS_JSON` | Two portfolio EVM addresses | Private runtime configuration / repository secret |
-| `RPC_CONFIG_JSON` | Authorized free HTTPS RPC endpoints with chain IDs | Repository secret; URLs may include API keys |
-| `ZERION_API_KEY` | Optional indexed token and position discovery | Free provider key in repository secret; verify quota and disable overage |
-| `REPORT_RECIPIENT` | Public age X25519 encryption recipient | Public runtime configuration; never substitute the private identity |
-| Consumer identity | Decrypt reports | Durable private consumer storage, never the public repository or collecting runner |
+| `WALLETS_JSON` | Two portfolio EVM addresses | Private runtime configuration |
+| `RPC_CONFIG_JSON` | Authorized free HTTPS RPC endpoints with stable chain slugs and chain IDs | Private runtime configuration; URLs may include API keys |
+| `ZERION_API_KEY` | Optional indexed token and position discovery | Private runtime configuration; verify free quota and disable overage |
+| `REPORT_RECIPIENT` | Optional age X25519 encryption recipient | Set only when the user already has a private consumer identity |
 
-Generate an identity using the official `age-keygen` tool in the private consuming environment and retain it before configuring its public recipient. Use the official `age` CLI to decrypt a downloaded report. Do not paste provider keys or the decryption identity into issues, commit messages or logs.
+The project does not ask the user to create a consumer identity. The existing age adapter may be used only if a suitable identity and private delivery channel already exist. Do not paste provider keys, wallet configuration or any decryption identity into issues, commit messages or logs.
+
+## Data-first priority
+
+Live-data feasibility now precedes additional generic metric work. First qualify candidate sources without wallet data (connectivity, free-tier limits, required methods, pagination and error semantics), then add contract tests from synthetic or official examples. Only a source that passes those gates may be used for one minimal private inventory run. The first run deliberately excludes valuation, HF and APR: its purpose is to measure networks, protocols, pagination, provenance and gaps.
+
+If no simple private input/result channel is already available when a source is ready, stop and report that single blocker. Do not compensate with public logs, artifacts, commits, more generic financial models or repeated provider retries.
 
 ## Open integration gates
 
-1. **Supported execution API:** the current GitHub connector can write code and read run logs/artifacts, but does not expose secret administration or initial workflow dispatch. The current runtime has no separately authenticated GitHub CLI. GitHub itself supports both APIs; this is a limitation of the connected surface. Recurring reports should use proper workflow dispatch or another authenticated job API, not trigger commits.
-2. **Authorized sources:** no RPC/provider credentials are configured. A no-wallet probe of Robinhood's documented public RPC timed out after 15 seconds in this runtime. No wallet or protocol coverage can be inferred from it.
-3. **Private delivery:** define a verified result channel and consumer key custody. Downloaded ciphertext must be tied to an expected run and commit. Remote collection is not enabled merely because local encryption tests passed.
+1. **Supported execution API:** authenticated GitHub workflow dispatch was successfully verified historically, then its temporary OAuth credentials were removed. The current session must not be assumed authenticated. Public Actions remain synthetic-only; commits are not collection triggers.
+2. **Authorized sources:** no RPC/provider credentials are configured. The historical probe of Robinhood's documented public RPC timed out; the current runtime rejects no-wallet JSON-RPC probes at its CONNECT tunnel with HTTP 403. No wallet or protocol coverage can be inferred from either result.
+3. **Private delivery:** define a simple verified result channel that does not expose wallet or financial data and does not require new key custody from the user.
 4. **Zero budget:** standard public Ubuntu runners are free, but artifact storage shares a metered allowance with GitHub Packages. Verify account limits and spending controls before publishing artifacts; short retention alone does not prove zero spend. No artifact upload is enabled by the current smoke workflow.
 5. **History:** encrypted run artifacts are a transport candidate, not a durable database. Choose and test persistent private storage independently.
 
@@ -47,8 +52,14 @@ Generate an identity using the official `age-keygen` tool in the private consumi
 
 [CI run 35509859451](https://github.com/DanilaKorobkov/crypto-portfolio/actions/runs/35509859451) passed all 31 named tests with the race detector on Go 1.27.1. Encryption remains verified with artificial fixtures only.
 
-Official GitHub CLI 2.101.0 is installed from a checksum-verified official release. The owner reported completing the device authorization step, but resuming the CLI process failed with `Network access to "https://api.github.com:443" was blocked by policy`. Neither `hosts.yml` nor `config.yml` was created in its isolated configuration directory. CLI authorization therefore remains unconfirmed. Do not repeat device login until the runtime network restriction is resolved.
+GitHub workflow dispatch was verified through temporary least-privilege OAuth access in run 35514438290. Those credentials were subsequently removed; the current session must not infer authentication from that historical success. Public unauthenticated access to `api.github.com` remains separate from repository mutations or secret administration.
 
-The existing GitHub connector still supports its advertised repository operations. It does not supply the missing secret administration or initial workflow dispatch operations. Do not substitute alternate network routes or artificial trigger commits for these missing capabilities.
+Do not substitute alternate network routes, public logs or artificial trigger commits for missing private execution and delivery capabilities.
 
-The next external prerequisite is an execution environment with permitted HTTPS access to GitHub API. [Codex cloud internet access](https://learn.chatgpt.com/docs/cloud/internet-access) can be configured per environment with domain and HTTP-method restrictions; equivalent controls in this ChatGPT Work session have not been verified. An administrator or environment owner must provide permitted access, or execution must move to an appropriately configured environment. After that, verify CLI authorization and repository access before using native `gh workflow run` and `gh secret set`. Provider credentials and private report delivery remain separate open gates.
+The remaining external prerequisites are private provider/wallet configuration, a simple verified private result channel, and confirmation of zero-cost account controls. Public GitHub API access alone satisfies none of these gates. The Robinhood public RPC still cannot be used from this runtime: no-wallet JSON-RPC probes are rejected by the environment's CONNECT tunnel with HTTP 403. Do not retry it through alternate routes or use public logs as a substitute for private result transport.
+
+## Remote collection decision
+
+The manual artifact-based collection workflow has been removed. It required the user to manage a separate decryption identity and added operational setup before the project had proved a simple private result channel. No live run was made and no portfolio secret or report was uploaded.
+
+The existing age adapter remains an optional, tested capability; it is not a user prerequisite and must not trigger another key-setup request. Public Actions remain synthetic-only. Real collection may resume only when an already-available private result channel can return the report without publishing wallet or financial data and without requiring additional key custody from the user.

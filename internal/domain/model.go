@@ -4,7 +4,9 @@ package domain
 
 import (
 	"errors"
+	"math/big"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 )
@@ -42,6 +44,14 @@ const (
 	UnsafePagination       Status = "unsafe_pagination"
 	PaginationCycle        Status = "pagination_cycle"
 	InconsistentPagination Status = "inconsistent_pagination"
+	UnsupportedProtocol    Status = "unsupported_protocol"
+	MissingPrice           Status = "missing_price"
+	DoubleCountRisk        Status = "double_count_risk"
+	Represented            Status = "represented"
+	InvalidRiskModel       Status = "invalid_risk_model"
+	NoDebt                 Status = "no_debt"
+	ScenarioUnavailable    Status = "scenario_unavailable"
+	ThresholdReached       Status = "threshold_reached_or_crossed"
 )
 
 func (s Status) StopsProvider() bool {
@@ -58,6 +68,7 @@ type NativeBalance struct {
 	Status Status  `json:"status"`
 }
 type ChainSnapshot struct {
+	Chain       string          `json:"chain"`
 	ChainID     uint64          `json:"chain_id"`
 	Status      Status          `json:"status"`
 	BlockNumber string          `json:"block_number,omitempty"`
@@ -96,6 +107,109 @@ type Discovery struct {
 	// A completed provider response never proves protocol or portfolio coverage.
 	CoverageComplete bool `json:"coverage_complete"`
 }
+
+// NormalizedCandidate is provider evidence prepared for later protocol
+// verification. It is not yet a portfolio position or a valuation.
+type NormalizedCandidate struct {
+	Wallet   Address `json:"wallet"`
+	ID       string  `json:"id"`
+	Chain    string  `json:"chain"`
+	Protocol string  `json:"protocol,omitempty"`
+	Kind     string  `json:"kind,omitempty"`
+	Atomic   string  `json:"atomic"`
+	Decimals int     `json:"decimals"`
+	Trash    *bool   `json:"trash,omitempty"`
+	Verified *bool   `json:"verified,omitempty"`
+	Status   Status  `json:"status"`
+}
+
+type Normalization struct {
+	Candidates       []NormalizedCandidate `json:"candidates"`
+	Failures         []Failure             `json:"failures"`
+	CoverageComplete bool                  `json:"coverage_complete"`
+}
+
+// NormalizeDiscovery validates exact quantities and collapses only identical
+// evidence from the same wallet. Conflicting evidence is retained and marked;
+// candidates from different wallets are never merged.
+func NormalizeDiscovery(discovery Discovery) Normalization {
+	result := Normalization{}
+	seen := make(map[string][]int)
+	conflicts := make(map[string]bool)
+	for _, wallet := range discovery.Wallets {
+		for _, candidate := range wallet.Candidates {
+			normalized, ok := normalizeCandidate(wallet.Wallet, candidate)
+			if !ok {
+				result.Failures = append(result.Failures, Failure{Scope: candidateScope(wallet.Wallet, candidate.ID), Status: InvalidResponse})
+				continue
+			}
+			key := string(wallet.Wallet) + "\x00" + normalized.Chain + "\x00" + normalized.ID
+			indexes := seen[key]
+			duplicate := false
+			for _, previous := range indexes {
+				if equalCandidate(result.Candidates[previous], normalized) {
+					duplicate = true
+					break
+				}
+			}
+			if duplicate {
+				continue
+			}
+			if len(indexes) > 0 {
+				for _, previous := range indexes {
+					result.Candidates[previous].Status = InconsistentPagination
+				}
+				normalized.Status = InconsistentPagination
+				if !conflicts[key] {
+					result.Failures = append(result.Failures, Failure{Scope: candidateScope(wallet.Wallet, candidate.ID), Status: InconsistentPagination})
+					conflicts[key] = true
+				}
+			}
+			seen[key] = append(indexes, len(result.Candidates))
+			result.Candidates = append(result.Candidates, normalized)
+		}
+	}
+	return result
+}
+
+func normalizeCandidate(wallet Address, candidate Candidate) (NormalizedCandidate, bool) {
+	id := strings.TrimSpace(candidate.ID)
+	chain := strings.ToLower(strings.TrimSpace(candidate.Chain))
+	if wallet == "" || id == "" || chain == "" || candidate.Decimals == nil || *candidate.Decimals < 0 || *candidate.Decimals > 255 {
+		return NormalizedCandidate{}, false
+	}
+	atomic := new(big.Int)
+	if strings.TrimSpace(candidate.Atomic) != candidate.Atomic || candidate.Atomic == "" {
+		return NormalizedCandidate{}, false
+	}
+	if _, ok := atomic.SetString(candidate.Atomic, 10); !ok {
+		return NormalizedCandidate{}, false
+	}
+	normalized := NormalizedCandidate{
+		Wallet: wallet, ID: id, Chain: chain,
+		Protocol: strings.ToLower(strings.TrimSpace(candidate.Protocol)),
+		Kind:     strings.ToLower(strings.TrimSpace(candidate.Kind)),
+		Atomic:   atomic.String(), Decimals: *candidate.Decimals,
+		Trash: candidate.Trash, Verified: candidate.Verified, Status: OK,
+	}
+	return normalized, true
+}
+
+func equalCandidate(a, b NormalizedCandidate) bool {
+	a.Status, b.Status = "", ""
+	return a.Wallet == b.Wallet && a.ID == b.ID && a.Chain == b.Chain && a.Protocol == b.Protocol && a.Kind == b.Kind &&
+		a.Atomic == b.Atomic && a.Decimals == b.Decimals && equalOptionalBool(a.Trash, b.Trash) && equalOptionalBool(a.Verified, b.Verified)
+}
+
+func equalOptionalBool(a, b *bool) bool {
+	return a == nil && b == nil || a != nil && b != nil && *a == *b
+}
+
+func candidateScope(wallet Address, id string) string {
+	parts := []string{"candidate", string(wallet), strings.TrimSpace(id)}
+	return strings.Join(slices.DeleteFunc(parts, func(value string) bool { return value == "" }), "/")
+}
+
 type Report struct {
 	SchemaVersion     int             `json:"schema_version"`
 	Kind              string          `json:"kind"`
@@ -106,6 +220,11 @@ type Report struct {
 	WalletCount       int             `json:"wallet_count"`
 	Chains            []ChainSnapshot `json:"chains"`
 	Discovery         Discovery       `json:"discovery"`
+	Normalization     Normalization   `json:"normalization"`
+	Verification      Verification    `json:"verification"`
+	Valuation         Valuation       `json:"valuation"`
+	Aggregation       Aggregation     `json:"aggregation"`
+	Risk              RiskAssessment  `json:"risk"`
 	Failures          []Failure       `json:"failures"`
 	NotImplemented    []string        `json:"not_implemented"`
 }
@@ -125,5 +244,8 @@ func (r *Report) Finalize(now time.Time) {
 		if wallet.Pages > 0 {
 			r.Status = "partial"
 		}
+	}
+	if len(r.Verification.Positions) > 0 {
+		r.Status = "partial"
 	}
 }

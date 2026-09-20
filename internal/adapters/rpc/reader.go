@@ -16,6 +16,7 @@ type Transport interface {
 }
 type Reader struct {
 	Endpoint string
+	Chain    string
 	ChainID  uint64
 	HTTP     Transport
 }
@@ -54,7 +55,7 @@ type block struct {
 }
 
 func (r Reader) Read(ctx context.Context, wallets []domain.Address) domain.ChainSnapshot {
-	result := domain.ChainSnapshot{ChainID: r.ChainID}
+	result := domain.ChainSnapshot{Chain: r.Chain, ChainID: r.ChainID}
 	var identity string
 	result.Status = r.call(ctx, "eth_chainId", []any{}, &identity)
 	if result.Status != domain.OK {
