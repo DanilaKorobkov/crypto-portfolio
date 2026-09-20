@@ -6,7 +6,7 @@ The initial bounded context is **portfolio discovery**: finding and preserving c
 | --- | --- | --- |
 | Domain | Wallet address value object, chain snapshots, candidates, report aggregate and completeness rules | Standard library |
 | Application | Collect diagnostics, cancellation, partial results and checkpoints; define reader/discoverer/repository ports | Domain |
-| Adapters | Translate RPC/Zerion responses, transport policy and JSON persistence | Inner layers |
+| Adapters | Translate RPC/Zerion responses, transport policy and plain/encrypted checkpoint persistence | Inner layers |
 | Composition root | Parse private configuration and construct concrete implementations | All layers |
 
 ```mermaid
@@ -30,4 +30,13 @@ No microservices, event bus, ORM, generic repository framework or speculative do
 
 ## Execution and privacy
 
-The public manual workflow is an offline smoke check. It proves build/test/runner availability, not RPC availability or a successful chat-to-portfolio round trip. Live results require a private transport; public Actions artifacts are not a private report store. Zero-spend requirements apply independently to runner minutes, storage and provider quotas.
+The public workflow is an offline smoke check triggered by relevant code pushes, pull requests or manual dispatch. It proves build/test/runner availability, not RPC availability or a successful chat-to-portfolio round trip. Live results require a private transport; public Actions artifacts are not a private report store. Zero-spend requirements apply independently to runner minutes, storage and provider quotas.
+
+
+## Encrypted report repository
+
+`storage.AgeFile` implements the application's `ReportRepository` using the standard age file format and an X25519 public recipient. Only the infrastructure adapter imports `filippo.io/age`. JSON is streamed into encryption; no plaintext temporary report is written. The encrypted writer must close successfully before fsync, close and atomic rename publish the checkpoint. A failed write preserves the previous checkpoint.
+
+The CLI validates the recipient before provider calls or output writes. It rejects configured collection in GitHub Actions when the recipient is absent. An unconfigured diagnostic may still produce a non-sensitive local JSON file in the smoke job. Plain JSON remains available for private local execution. An earlier plaintext file in a reused local output directory is not automatically deleted; remote runs must use a clean workspace and must never upload output directory globs.
+
+The collector has no decryption identity. Keys must be retained privately by the report consumer before live collection starts. Encryption alone is not delivery, authenticity of the sender, or durable history: consumer validation must also bind an expected repository/run/commit and validate the report schema/freshness. A public recipient allows anyone to produce a decryptable age file. No remote artifact publication is enabled yet.

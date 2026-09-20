@@ -1,6 +1,19 @@
 name: Portfolio offline smoke test
 on:
   workflow_dispatch:
+  push:
+    branches: [develop]
+    paths:
+      - '**.go'
+      - go.mod
+      - go.sum
+      - .github/workflows/smoke.yml
+  pull_request:
+    paths:
+      - '**.go'
+      - go.mod
+      - go.sum
+      - .github/workflows/smoke.yml
 permissions:
   contents: read
 concurrency:
@@ -30,4 +43,5 @@ jobs:
           WALLETS_JSON: '[]'
           RPC_CONFIG_JSON: '[]'
           ZERION_API_KEY: ''
+          REPORT_RECIPIENT: ''
         run: go run ./cmd/portfolio

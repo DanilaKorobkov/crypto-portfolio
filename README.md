@@ -1,6 +1,6 @@
 # Crypto Portfolio
 
-Read-only portfolio discovery and diagnostics in **Go 1.27.1** (latest stable verified on 2026-09-20). DDD and Clean Architecture, standard library only.
+Read-only portfolio discovery and diagnostics in **Go 1.27.1** (latest stable verified on 2026-09-20). DDD and Clean Architecture. The domain and application use the standard library; the encrypted storage adapter uses pinned `filippo.io/age` v1.3.2.
 
 This is stage 0, not a complete financial report. No transactions, private wallet keys, signatures or paid fallback.
 
@@ -19,6 +19,7 @@ Private runtime configuration:
 - `WALLETS_JSON`: array of up to 20 EVM wallet addresses.
 - `RPC_CONFIG_JSON`: up to eight objects with integer `chain_id` and an authorized HTTPS `url`.
 - `ZERION_API_KEY`: optional discovery key; use a free plan with provider-side spending disabled.
+- `REPORT_RECIPIENT`: optional public age X25519 recipient (`age1...`). When set, every checkpoint goes to `output/diagnostics.json.age`; the encryption identity stays outside the collector. Invalid recipients stop the run with no plaintext fallback. Configured collection under GitHub Actions requires this setting.
 
 Never commit real configuration or reports. The CLI logs only the diagnostic status.
 
@@ -42,9 +43,9 @@ The [Software Design Document](docs/design/Crypto-Portfolio-SDD.md) records requ
 
 ## Public repository, private data
 
-The manual GitHub Actions smoke workflow runs synthetic offline tests and an unconfigured command only. It uses a standard Ubuntu runner without artifact uploads or caching, and no wallet/provider secrets. No schedule is configured.
+The GitHub Actions smoke workflow runs synthetic offline tests and an unconfigured command on relevant pushes to `develop`, pull requests, and manual dispatch. Encryption tests generate temporary keys and artificial reports; no user keys are used. It uses a standard Ubuntu runner without artifact uploads or caching, and no wallet/provider secrets. No schedule is configured.
 
-Live collection on a public runner requires a private or encrypted result channel. Raw reports, real wallet addresses and secrets must remain outside public code, logs and artifacts. The public SDD uses wallet placeholders. The public runner alone is not a completed portfolio integration.
+Live collection on a public runner requires a verified private or encrypted result channel. The encryption adapter is implemented, but remote delivery and durable key custody are not yet configured. See the [private collection runbook](docs/operations/private-collection.md). Raw reports, real wallet addresses and secrets must remain outside public code, logs and artifacts. The public SDD uses wallet placeholders. The public runner alone is not a completed portfolio integration.
 
 ## References
 
