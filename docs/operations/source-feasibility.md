@@ -32,3 +32,20 @@ Run the manual public-source workflow once on the standard GitHub-hosted runner.
 - do not begin D2 or request user secrets until at least one source passes D0 and D1.
 
 A successful status probe does not authorize live collection. D2 still requires the separate private-input and private-result gates.
+
+## Authenticated Zerion D1 gate
+
+`cmd/zerionprobe` is a bounded catalog-only contract check. It requires
+`ZERION_API_KEY` from the process environment, passes no wallet addresses, and
+prints only the normalized status plus chain/request counts. It fails closed on
+a missing credential, provider/transport error, incomplete catalog, or empty
+catalog. Response bodies, chain identifiers, headers, and credentials are not
+printed or uploaded.
+
+The manual `zerion-contract-probe.yml` workflow is synthetic: it has read-only
+repository permission, no wallet input, no artifact, no schedule, and no commit
+trigger. Its secret must be a fresh free-plan credential configured in GitHub;
+a credential pasted into chat is considered disclosed and must not be installed
+or tested. Passing this gate proves only authenticated catalog reachability and
+the envelope contract. It does not prove wallet-position coverage, quota safety,
+pagination correctness, or portfolio completeness.
