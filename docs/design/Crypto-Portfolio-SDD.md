@@ -1,6 +1,6 @@
 # Crypto Portfolio — Software Design Document
 
-Версия 3.8 · 20 сентября 2026 · Go, DDD/Clean Architecture и журнал проверки осуществимости.
+Версия 3.9 · 20 сентября 2026 · Go, DDD/Clean Architecture и журнал проверки осуществимости.
 
 **Статус:** вычислительное ядро синтетически проверено, но главный риск продукта — полнота и проверяемость реальных данных — ещё не снят. Authenticated Zerion catalog доступен с GitHub-hosted runner; публичный zero address отвергнут positions API с `api_error` и непригоден для доказательства схемы. Public Actions остаются только синтетическими; live-сбор не выполнялся, реальных данных кошельков нет. Актуальная стратегия — §12, результаты — §14.27–§14.34. Это не готовый отчёт о портфеле.
 
@@ -757,3 +757,11 @@ PR #6 прошёл smoke run `35521261277`, объединён коммитом 
 Пользователь разрешил перейти к ранее переданным реальным кошелькам, но доступная конфигурация их не содержит: GitHub repository имеет provider secret, однако secret `WALLETS_JSON` отсутствует, локальная среда также не имеет wallet configuration. Адреса из более раннего внешнего контекста нельзя угадывать или восстанавливать из публичных источников.
 
 Кроме того, действующее правило проекта запрещает реальные wallet calls из публичных Actions до проверенного приватного result transport. Поэтому следующий внешний шаг должен одновременно предоставить `WALLETS_JSON` приватно и определить разрешённый private executor/result channel. Не допускаются публичные workflow logs, artifacts или коммиты с адресами/financial output. До этого дальнейшие synthetic retries остановлены; это один конкретный D2 blocker, а не повод возвращаться к общим моделям.
+
+### 14.35 Подготовка приватного encrypted transport для D2 — v3.9, 20.09.2026
+
+Пользователь настроил repository secret `WALLETS_JSON`; наличие проверено без чтения значения. `ZERION_API_KEY` также присутствует. Агент создал локальную age identity в `$HOME/.config/crypto-portfolio/consumer-identity.txt` с mode `0600`; в GitHub variable `REPORT_RECIPIENT` помещён только публичный recipient. Значения identity, recipient, wallet addresses и provider key не выводились и не коммитились. Пользователю не требуется управлять отдельным ключом.
+
+Добавлен ручной `private-discovery.yml` с двумя режимами. `synthetic` не получает wallet/provider inputs и предназначен для end-to-end проверки ciphertext upload/download/decrypt. `live` получает secrets только в process environment и допускается лишь после успешной synthetic transport verification. Оба режима имеют read-only repository permission, восьмиминутный timeout, concurrency guard, проверяют отсутствие plaintext и загружают только `.age` на один день.
+
+Следующий порядок обязателен: опубликовать workflow, выполнить synthetic mode, скачать artifact штатным API, связать его с ожидаемыми repo/run/commit, расшифровать локальной identity и проверить отсутствие реальных данных. Только после этого один раз запустить live mode. Live artifact скачивается и расшифровывается локально; адреса, provider payload и финансовые данные не выводятся в Actions logs и не попадают в репозиторий.
