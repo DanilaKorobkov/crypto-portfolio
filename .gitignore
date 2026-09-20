@@ -1,0 +1,10 @@
+/output/
+/evidence/
+/private/
+/.env
+/.env.*
+*.pem
+*.key
+*.test
+/portfolio
+__pycache__/
