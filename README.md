@@ -22,6 +22,10 @@ Private runtime configuration:
 
 Never commit real configuration or reports. The CLI logs only the diagnostic status.
 
+## Design document
+
+The [Software Design Document](docs/design/Crypto-Portfolio-SDD.md) records requirements, architecture, verified limitations and implementation progress. Keep it updated and committed together with project changes, as required by [AGENTS.md](AGENTS.md).
+
 ## Architecture
 
 `cmd/portfolio` composes the application. `internal/domain` holds discovery concepts and report completeness rules. `internal/application` owns the collection use case and provider/storage ports. `internal/adapters` implements JSON-RPC, Zerion, bounded HTTP and private atomic JSON checkpoints. Infrastructure depends on the inner layers, not the reverse. See [architecture](docs/architecture.md).
@@ -40,7 +44,7 @@ Never commit real configuration or reports. The CLI logs only the diagnostic sta
 
 The manual GitHub Actions smoke workflow runs synthetic offline tests and an unconfigured command only. It uses a standard Ubuntu runner without artifact uploads or caching, and no wallet/provider secrets. No schedule is configured.
 
-Live collection on a public runner requires a private or encrypted result channel. Raw reports and personal design documents must remain outside public code, logs and artifacts. The public runner alone is not a completed portfolio integration.
+Live collection on a public runner requires a private or encrypted result channel. Raw reports, real wallet addresses and secrets must remain outside public code, logs and artifacts. The public SDD uses wallet placeholders. The public runner alone is not a completed portfolio integration.
 
 ## References
 
