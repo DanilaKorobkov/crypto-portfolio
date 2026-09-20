@@ -1,8 +1,8 @@
 # Crypto Portfolio — Software Design Document
 
-Версия 3.6 · 20 сентября 2026 · Go, DDD/Clean Architecture и журнал проверки осуществимости.
+Версия 3.7 · 20 сентября 2026 · Go, DDD/Clean Architecture и журнал проверки осуществимости.
 
-**Статус:** вычислительное ядро синтетически проверено, но главный риск продукта — полнота и проверяемость реальных данных — ещё не снят. Authenticated Zerion catalog доступен с GitHub-hosted runner; первый positions request получил provider `rate_limited`, поэтому positions contract и реальное покрытие пока не доказаны. Public Actions остаются только синтетическими; live-сбор не выполнялся, реальных данных кошельков нет. Актуальная стратегия — §12, результаты — §14.27–§14.32. Это не готовый отчёт о портфеле.
+**Статус:** вычислительное ядро синтетически проверено, но главный риск продукта — полнота и проверяемость реальных данных — ещё не снят. Authenticated Zerion catalog доступен с GitHub-hosted runner; positions contract пока не доказан из-за `rate_limited`, затем недостаточно точного `transport_error`. Public Actions остаются только синтетическими; live-сбор не выполнялся, реальных данных кошельков нет. Актуальная стратегия — §12, результаты — §14.27–§14.33. Это не готовый отчёт о портфеле.
 
 ## 1. Задача
 
@@ -743,3 +743,9 @@ Coverage публикует counts экономических, оценённы�
 PR #4 прошёл synthetic smoke run `35520878304`, объединён в `develop` коммитом `668f7069a30fc7fddd3cf7636879b1d8a544ccd6`, после чего вручную запущен run `35520937842`. Catalog снова успешно и полностью вернул 64 chain records. Следующий запрос к positions endpoint для встроенного публичного zero address получил `rate_limited`; итог: `positions_complete=false`, zero pages/candidates, два requests и ожидаемый failed job.
 
 Это первый проверенный provider-origin failure для positions endpoint. Он не означает пустой кошелёк, неподдерживаемую схему или transport block. Адаптер правильно остановил provider и не повторил запрос в том же run. Для одной контролируемой проверки burst-гипотезы probe-specific interval увеличен с 400 миллисекунд до двух секунд; общий retry loop не добавляется и production defaults не меняются.
+
+### 14.33 Повторный positions D1 выявил недостаточную классификацию HTTP — v3.7, 20.09.2026
+
+PR #5 прошёл smoke run `35521010084`, объединён коммитом `6d615afafe8dad2fb3eeade3162c9bfd3fc73fa8`, затем run `35521072149` повторил D1 с интервалом две секунды. Catalog снова был полным с 64 chains, но positions получил `transport_error`, zero pages/candidates и failed closed. Следовательно, простое burst-spacing не подтвердило positions contract.
+
+Выявлен observability gap: HTTP transport объединял provider client errors 400/404/422 с сетевыми и server failures в `transport_error`. Классификация исправлена: эти коды становятся `api_error`, не раскрывая response body. Следующий один run различит invalid public test address/contract request от настоящего transport failure; повторные бесконтрольные retries запрещены.

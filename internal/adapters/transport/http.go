@@ -81,6 +81,8 @@ func Classify(code int) domain.Status {
 	switch code {
 	case 200:
 		return domain.OK
+	case 400, 404, 422:
+		return domain.APIError
 	case 401:
 		return domain.AuthRequired
 	case 402:
