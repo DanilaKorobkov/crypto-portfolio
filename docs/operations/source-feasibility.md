@@ -108,3 +108,15 @@ requests were attempted, no positions page was accepted, and the job failed
 closed. This is provider-origin evidence, not a transport failure or an empty
 portfolio. The probe interval is increased from 400 milliseconds to two seconds
 before one controlled retry; no general retry loop is added.
+
+After HTTP client-error classification was corrected and merged in PR #6,
+control run `35521319090` returned `api_error` for the positions request while
+the 64-chain catalog remained complete. The fixed zero address is therefore
+rejected as a contract fixture. It must not be retried or interpreted as an
+empty portfolio.
+
+The provider credential is configured, but neither the repository nor this
+runtime currently contains `WALLETS_JSON`. Real wallets also cannot be queried
+from public Actions under the project's synthetic-only rule. D2 is blocked on a
+private wallet-input plus private result channel; addresses and financial output
+must not be placed in public workflow logs, artifacts, or commits.

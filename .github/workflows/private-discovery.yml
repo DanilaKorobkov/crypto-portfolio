@@ -1,0 +1,58 @@
+name: Private encrypted discovery
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Synthetic transport verification or on-demand live discovery
+        required: true
+        type: choice
+        options: [synthetic, live]
+        default: synthetic
+permissions:
+  contents: read
+concurrency:
+  group: private-encrypted-discovery
+  cancel-in-progress: false
+jobs:
+  collect:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Validate private configuration
+        env:
+          MODE: ${{ inputs.mode }}
+          WALLETS_JSON: ${{ secrets.WALLETS_JSON }}
+          ZERION_API_KEY: ${{ secrets.ZERION_API_KEY }}
+          REPORT_RECIPIENT: ${{ vars.REPORT_RECIPIENT }}
+        run: |
+          test -n "$REPORT_RECIPIENT"
+          if [ "$MODE" = live ]; then
+            test -n "$WALLETS_JSON"
+            test -n "$ZERION_API_KEY"
+          fi
+      - name: Collect encrypted checkpoint
+        env:
+          WALLETS_JSON: ${{ inputs.mode == 'live' && secrets.WALLETS_JSON || '[]' }}
+          RPC_CONFIG_JSON: '[]'
+          ZERION_API_KEY: ${{ inputs.mode == 'live' && secrets.ZERION_API_KEY || '' }}
+          REPORT_RECIPIENT: ${{ vars.REPORT_RECIPIENT }}
+        run: go run ./cmd/portfolio
+      - name: Enforce ciphertext-only output
+        run: |
+          test -f output/diagnostics.json.age
+          test ! -e output/diagnostics.json
+          test "$(find output -maxdepth 1 -type f | wc -l)" -eq 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: encrypted-discovery-${{ github.run_id }}
+          path: output/diagnostics.json.age
+          if-no-files-found: error
+          retention-days: 1
