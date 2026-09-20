@@ -58,3 +58,9 @@ The remaining external prerequisites are authenticated, least-privilege access t
 `.github/workflows/collect.yml` is manual-only and targets the `live-collection` GitHub environment. It has read-only repository permissions, an eight-minute job timeout and concurrency protection. The job refuses to collect unless wallets, at least one source configuration and the public age recipient are present. It then verifies that the output directory contains only `diagnostics.json.age` before uploading a one-day artifact.
 
 The workflow's presence does not authorize a live run. Before the first dispatch, configure environment protection, verify zero-cost Actions and artifact controls, provision secrets without exposing their values, and retain the consumer identity outside GitHub. An artifact is transport, not durable history. Bind every downloaded ciphertext to the expected repository, workflow run and commit before decrypting it.
+
+## Published environment status
+
+PR #1 was merged into `develop` as `798f7aa1f3ec7a6279600167c88239979ca4ed44`. The `live-collection` environment exists and its deployment branch policy permits only `develop`. It has no portfolio secrets or recipient variable yet, and the encrypted workflow has not been dispatched.
+
+The consumer must create and durably retain an age identity outside GitHub. Only its public recipient belongs in the environment variable `REPORT_RECIPIENT`. Wallets and provider configuration belong in environment secrets and must never be pasted into chat or committed. Confirm Actions spending controls before the first artifact-producing run.
