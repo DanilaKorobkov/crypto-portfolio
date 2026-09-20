@@ -1,0 +1,19 @@
+name: Public source connectivity probe
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: public-source-connectivity-probe
+  cancel-in-progress: false
+jobs:
+  probe:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Probe fixed public endpoints without wallet data
+        run: ./scripts/probe-public-sources.sh

@@ -35,14 +35,14 @@ func blockReply(hash string) string {
 }
 func TestWrongChainStopsBeforeWalletRead(t *testing.T) {
 	f := &fakeTransport{replies: []string{response("0x1")}}
-	r := (Reader{ChainID: 8453, HTTP: f}).Read(context.Background(), []domain.Address{"fixture"})
+	r := (Reader{Chain: "base", ChainID: 8453, HTTP: f}).Read(context.Background(), []domain.Address{"fixture"})
 	if r.Status != domain.WrongChain || len(f.methods) != 1 {
 		t.Fatal(r, f.methods)
 	}
 }
 func TestBalanceExactAndSameBlock(t *testing.T) {
 	f := &fakeTransport{replies: []string{response("0x2105"), blockReply("a"), response("0xffffffffffffffffffffffffffffffff"), blockReply("a")}}
-	r := (Reader{ChainID: 8453, HTTP: f}).Read(context.Background(), []domain.Address{"fixture"})
+	r := (Reader{Chain: "base", ChainID: 8453, HTTP: f}).Read(context.Background(), []domain.Address{"fixture"})
 	if r.Status != domain.OK || r.Balances[0].Atomic != "340282366920938463463374607431768211455" {
 		t.Fatal(r)
 	}
@@ -52,7 +52,7 @@ func TestBalanceExactAndSameBlock(t *testing.T) {
 }
 func TestReorgDiscardsUnverifiedBalances(t *testing.T) {
 	f := &fakeTransport{replies: []string{response("0x1"), blockReply("a"), response("0x10"), blockReply("b")}}
-	r := (Reader{ChainID: 1, HTTP: f}).Read(context.Background(), []domain.Address{"fixture"})
+	r := (Reader{Chain: "ethereum", ChainID: 1, HTTP: f}).Read(context.Background(), []domain.Address{"fixture"})
 	if r.Status != domain.InconsistentSnapshot || r.Balances[0].Atomic != "" || r.Balances[0].Status == domain.OK {
 		t.Fatal(r)
 	}
@@ -60,7 +60,7 @@ func TestReorgDiscardsUnverifiedBalances(t *testing.T) {
 func TestRPCErrorAndNullAreNotZero(t *testing.T) {
 	for _, raw := range []string{`{"jsonrpc":"2.0","id":1,"error":{"code":-1}}`, response(nil), `{"jsonrpc":"2.0","id":2,"result":"0x1"}`} {
 		f := &fakeTransport{replies: []string{raw}}
-		r := (Reader{ChainID: 1, HTTP: f}).Read(context.Background(), nil)
+		r := (Reader{Chain: "ethereum", ChainID: 1, HTTP: f}).Read(context.Background(), nil)
 		if r.Status == domain.OK {
 			t.Fatal("invalid response accepted")
 		}

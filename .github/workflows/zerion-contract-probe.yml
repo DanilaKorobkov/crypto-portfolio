@@ -1,0 +1,25 @@
+name: Zerion authenticated catalog contract probe
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: zerion-catalog-contract-probe
+  cancel-in-progress: false
+jobs:
+  probe:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Validate authenticated catalog without wallet data
+        env:
+          ZERION_API_KEY: ${{ secrets.ZERION_API_KEY }}
+        run: go run ./cmd/zerionprobe
