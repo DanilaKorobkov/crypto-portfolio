@@ -66,3 +66,17 @@ from this shell cannot distinguish provider behavior and is therefore stopped.
 The next useful test remains a single manual run on a permitted executor; the
 credential must be rotated no later than the end of the feasibility phase and
 before any production or wallet-data use.
+
+## GitHub executor publication status — 20 September 2026
+
+The account owner completed a fresh device authorization after configuring the
+test secret through GitHub's UI. Identity and repository metadata reads worked,
+but capability checks for secret metadata, branch push, and workflow dispatch
+all returned HTTP 403 `Resource not accessible by integration`. The secret value
+was not read and the catalog workflow has therefore not run on GitHub.
+
+The local branch is synchronized with the current `develop` history, but the
+probe workflow is not present on the remote default branch. Repeating device
+authorization with the same integration cannot change its permissions. The next
+useful action is repository contents-write plus Actions workflow-dispatch access,
+or publication of the prepared change through an already authorized GitHub UI.
