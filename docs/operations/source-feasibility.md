@@ -35,12 +35,13 @@ A successful status probe does not authorize live collection. D2 still requires 
 
 ## Authenticated Zerion D1 gate
 
-`cmd/zerionprobe` is a bounded catalog-only contract check. It requires
-`ZERION_API_KEY` from the process environment, passes no wallet addresses, and
-prints only the normalized status plus chain/request counts. It fails closed on
-a missing credential, provider/transport error, incomplete catalog, or empty
-catalog. Response bodies, chain identifiers, headers, and credentials are not
-printed or uploaded.
+`cmd/zerionprobe` is a bounded contract check. It requires `ZERION_API_KEY`
+from the process environment and uses only the fixed, publicly declared zero
+address for the positions-envelope check; it cannot accept a user wallet. It
+prints only normalized statuses and counts. It fails closed on a missing
+credential, provider/transport error, incomplete or empty catalog, or an
+incomplete positions response. Response bodies, chain identifiers, position
+identifiers, headers, quantities, and credentials are not printed or uploaded.
 
 The manual `zerion-contract-probe.yml` workflow is synthetic: it has read-only
 repository permission, no wallet input, no artifact, no schedule, and no commit
@@ -80,3 +81,23 @@ probe workflow is not present on the remote default branch. Repeating device
 authorization with the same integration cannot change its permissions. The next
 useful action is repository contents-write plus Actions workflow-dispatch access,
 or publication of the prepared change through an already authorized GitHub UI.
+
+## GitHub-hosted authenticated result — 20 September 2026
+
+Persistent official GitHub CLI OAuth authorization was established with
+`repo`, `workflow`, `read:org`, and `gist` scopes. PR #3 passed the synthetic
+race-test workflow and was squash-merged into `develop` as
+`f953ff3e9c9884893872b09e284c6f998cf2caaf`.
+
+Manual run `35520749102` then executed the authenticated catalog probe on a
+GitHub-hosted runner. It completed successfully in 26 seconds with
+`catalog_status=ok`, a complete catalog, 64 parsed chains, and one request. No
+wallet address, position endpoint, response body, or artifact was used in this
+run. This closes authenticated catalog reachability only; it does not prove
+position-schema compatibility or coverage.
+
+The next D1 check extends the same bounded command to the fixed public zero
+address. It validates only the positions envelope and pagination termination,
+logs counts rather than identifiers or quantities, and still cannot accept a
+user wallet. A zero-candidate result is valid contract evidence but proves no
+real portfolio coverage.

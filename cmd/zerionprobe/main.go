@@ -18,18 +18,44 @@ type catalogDiscoverer interface {
 	Discover(context.Context, []domain.Address, func(domain.Discovery) error) (domain.Discovery, error)
 }
 
-func probe(ctx context.Context, key string, discoverer catalogDiscoverer) (domain.Status, int, int, error) {
+var publicTestAddress = domain.Address("0x0000000000000000000000000000000000000000")
+
+type probeResult struct {
+	CatalogStatus    domain.Status
+	CatalogComplete  bool
+	Chains           int
+	PositionStatus   domain.Status
+	PositionComplete bool
+	Pages            int
+	Candidates       int
+	Requests         int
+}
+
+func probe(ctx context.Context, key string, discoverer catalogDiscoverer) (probeResult, error) {
 	if key == "" {
-		return domain.MissingAPIKey, 0, 0, errors.New("ZERION_API_KEY is required")
+		return probeResult{CatalogStatus: domain.MissingAPIKey}, errors.New("ZERION_API_KEY is required")
 	}
-	result, err := discoverer.Discover(ctx, nil, func(domain.Discovery) error { return nil })
+	result, err := discoverer.Discover(ctx, []domain.Address{publicTestAddress}, func(domain.Discovery) error { return nil })
+	summary := probeResult{
+		CatalogStatus: result.CatalogStatus, CatalogComplete: result.CatalogComplete,
+		Chains: len(result.Chains), Requests: result.Requests,
+	}
+	if len(result.Wallets) == 1 {
+		summary.PositionStatus = result.Wallets[0].Status
+		summary.PositionComplete = result.Wallets[0].ResponseComplete
+		summary.Pages = result.Wallets[0].Pages
+		summary.Candidates = len(result.Wallets[0].Candidates)
+	}
 	if err != nil {
-		return result.CatalogStatus, len(result.Chains), result.Requests, errors.New("catalog probe failed")
+		return summary, errors.New("provider contract probe failed")
 	}
 	if result.CatalogStatus != domain.OK || !result.CatalogComplete || len(result.Chains) == 0 {
-		return result.CatalogStatus, len(result.Chains), result.Requests, errors.New("catalog contract not satisfied")
+		return summary, errors.New("catalog contract not satisfied")
 	}
-	return result.CatalogStatus, len(result.Chains), result.Requests, nil
+	if len(result.Wallets) != 1 || result.Wallets[0].Wallet != publicTestAddress || result.Wallets[0].Status != domain.OK || !result.Wallets[0].ResponseComplete {
+		return summary, errors.New("positions contract not satisfied")
+	}
+	return summary, nil
 }
 
 func run() error {
@@ -37,10 +63,11 @@ func run() error {
 	discoverer := zerion.New(transport.New(), key)
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
-	status, chains, requests, err := probe(ctx, key, discoverer)
+	result, err := probe(ctx, key, discoverer)
 	// Counts and the normalized status are safe D1 evidence. Provider payloads,
 	// chain identifiers, credentials, and transport diagnostics stay private.
-	fmt.Printf("zerion_catalog status=%s complete=%t chains=%d requests=%d\n", status, err == nil, chains, requests)
+	fmt.Printf("zerion_contract catalog_status=%s catalog_complete=%t chains=%d positions_status=%s positions_complete=%t pages=%d candidates=%d requests=%d\n",
+		result.CatalogStatus, result.CatalogComplete, result.Chains, result.PositionStatus, result.PositionComplete, result.Pages, result.Candidates, result.Requests)
 	return err
 }
 
